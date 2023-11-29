@@ -4,7 +4,7 @@ import io
 import os
 import tensorflow as tf
 from keras.layers import Conv2D, MaxPooling2D
-from keras.layers import Dense, Flatten
+from keras.layers import Dense, Flatten, Dropout
 from keras.models import Sequential
 
 import os
@@ -41,9 +41,10 @@ def download_data():
     extract_folder = "data"
     if not os.listdir(extract_folder):
         # Download the zip file
+        print("starting download.")
         response = requests.get(url)
         zip_file = zipfile.ZipFile(io.BytesIO(response.content))
-
+        print("starting extracting.")
         # Extract the contents to the specified folder
         zip_file.extractall(extract_folder)
 
@@ -87,16 +88,16 @@ def get_data():
 
 def train(data, model=None):
     if model is None:
-        # TODO: dynamically determine input and output shapes
-        model = construct_model()
+        input_shape = data.element_spec[0].shape
+        input_shape = [i for i in input_shape if i is not None]
+        model = construct_model(input_shape=input_shape)
 
-    # TODO: add validation
-    hist = model.fit(data, epochs=20)
+    hist = model.fit(data, epochs=30)
 
-    return hist
+    return model, hist
 
 
-def construct_model(input_shape=(128 * 2, 216, 1), num_classes=50):
+def construct_model(input_shape, num_classes=50):
     model = Sequential()
 
     # Apply convolutional layers
@@ -116,10 +117,14 @@ def construct_model(input_shape=(128 * 2, 216, 1), num_classes=50):
     # Flatten the 2D data
     model.add(Flatten())
 
+    model.add(Dense(128))
+    model.add(Dropout(0.1))
+    model.add(Dense(128))
+    model.add(Dropout(0.1))
     model.add(Dense(64))
-    model.add(Dense(64))
-    model.add(Dense(64))
-    model.add(Dense(64))
+    model.add(Dropout(0.1))
+    model.add(Dense(32))
+    model.add(Dropout(0.1))
     model.add(Dense(num_classes, activation='softmax'))
 
     model.compile(
@@ -128,11 +133,21 @@ def construct_model(input_shape=(128 * 2, 216, 1), num_classes=50):
         metrics=["accuracy"]
     )
 
-    # TODO: try other architectures
+    # TODO: try other architectures maybe hyperparameter-optimization
 
     return model
 
 
 if __name__ == "__main__":
     download_data()
-    train(get_data())
+    data = get_data()
+    train_data, test_data = tf.keras.utils.split_dataset(data, left_size=0.9)
+
+    model, hist = train(train_data)
+
+    score = model.evaluate(test_data, verbose=0)
+    print('Test loss:', score[0])
+    print('Test accuracy:', score[1])
+
+
+
