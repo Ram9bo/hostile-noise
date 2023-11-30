@@ -1,0 +1,202 @@
+{
+  "0": {
+    "name": "dog",
+    "hostile": false
+  },
+  "1": {
+    "name": "rooster",
+    "hostile": true
+  },
+  "2": {
+    "name": "pig",
+    "hostile": false
+  },
+  "3": {
+    "name": "cow",
+    "hostile": false
+  },
+  "4": {
+    "name": "frog",
+    "hostile": false
+  },
+  "5": {
+    "name": "cat",
+    "hostile": false
+  },
+  "6": {
+    "name": "hen",
+    "hostile": false
+  },
+  "7": {
+    "name": "insects",
+    "hostile": false
+  },
+  "8": {
+    "name": "sheep",
+    "hostile": false
+  },
+  "9": {
+    "name": "crow",
+    "hostile": false
+  },
+  "10": {
+    "name": "rain",
+    "hostile": false
+  },
+  "11": {
+    "name": "sea_waves",
+    "hostile": false
+  },
+  "12": {
+    "name": "crackling_fire",
+    "hostile": false
+  },
+  "13": {
+    "name": "crickets",
+    "hostile": true
+  },
+  "14": {
+    "name": "chirping_birds",
+    "hostile": false
+  },
+  "15": {
+    "name": "water_drops",
+    "hostile": false
+  },
+  "16": {
+    "name": "wind",
+    "hostile": false
+  },
+  "17": {
+    "name": "pouring_water",
+    "hostile": false
+  },
+  "18": {
+    "name": "toilet_flush",
+    "hostile": false
+  },
+  "19": {
+    "name": "thunderstorm",
+    "hostile": false
+  },
+  "20": {
+    "name": "crying_baby",
+    "hostile": true
+  },
+  "21": {
+    "name": "sneezing",
+    "hostile": false
+  },
+  "22": {
+    "name": "clapping",
+    "hostile": false
+  },
+  "23": {
+    "name": "breathing",
+    "hostile": false
+  },
+  "24": {
+    "name": "coughing",
+    "hostile": true
+  },
+  "25": {
+    "name": "footsteps",
+    "hostile": false
+  },
+  "26": {
+    "name": "laughing",
+    "hostile": false
+  },
+  "27": {
+    "name": "brushing_teeth",
+    "hostile": false
+  },
+  "28": {
+    "name": "snoring",
+    "hostile": true
+  },
+  "29": {
+    "name": "drinking_sipping",
+    "hostile": false
+  },
+  "30": {
+    "name": "door_wood_knock",
+    "hostile": false
+  },
+  "31": {
+    "name": "mouse_click",
+    "hostile": false
+  },
+  "32": {
+    "name": "keyboard_typing",
+    "hostile": false
+  },
+  "33": {
+    "name": "door_wood_creaks",
+    "hostile": true
+  },
+  "34": {
+    "name": "can_opening",
+    "hostile": false
+  },
+  "35": {
+    "name": "washing_machine",
+    "hostile": true
+  },
+  "36": {
+    "name": "vacuum_cleaner",
+    "hostile": true
+  },
+  "37": {
+    "name": "clock_alarm",
+    "hostile": true
+  },
+  "38": {
+    "name": "clock_tick",
+    "hostile": false
+  },
+  "39": {
+    "name": "glass_breaking",
+    "hostile": true
+  },
+  "40": {
+    "name": "helicopter",
+    "hostile": true
+  },
+  "41": {
+    "name": "chainsaw",
+    "hostile": true
+  },
+  "42": {
+    "name": "siren",
+    "hostile": true
+  },
+  "43": {
+    "name": "car_horn",
+    "hostile": true
+  },
+  "44": {
+    "name": "engine",
+    "hostile": false
+  },
+  "45": {
+    "name": "train",
+    "hostile": true
+  },
+  "46": {
+    "name": "church_bells",
+    "hostile": false
+  },
+  "47": {
+    "name": "airplane",
+    "hostile": true
+  },
+  "48": {
+    "name": "fireworks",
+    "hostile": false
+  },
+  "49": {
+    "name": "hand_saw",
+    "hostile": false
+  }
+}

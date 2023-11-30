@@ -1,19 +1,17 @@
-import requests
-import zipfile
 import io
 import os
+import zipfile
+
+import librosa
+import librosa.display
+import numpy as np
+import requests
 import tensorflow as tf
 from keras.layers import Conv2D, MaxPooling2D
 from keras.layers import Dense, Flatten, Dropout
 from keras.models import Sequential
-
-import os
-import librosa
-import librosa.display
-import numpy as np
-import matplotlib.pyplot as plt
-import tensorflow as tf
 from tqdm import tqdm
+import json
 
 
 # Function to load and preprocess a single audio file
@@ -28,10 +26,9 @@ def preprocess_audio(audio_path):
 
 
 # Function to extract class label from file name
-def extract_label(file_name):
+def extract_class_label(file_name):
     # Label is the last part
-    label_str = file_name.split(".")[0].split('-')[3]
-    return int(label_str)
+    return file_name.split(".")[0].split('-')[3]
 
 
 def download_data():
@@ -63,6 +60,10 @@ def get_data():
     spectrograms = []
     labels = []
 
+    hostility = {}
+    with open('hostility.json', 'r') as json_file:
+        hostility = json.load(json_file)
+
     # Iterate through each WAV file in the folder
     for file_name in tqdm(os.listdir(data_folder)):
         if file_name.endswith(".wav"):
@@ -71,11 +72,12 @@ def get_data():
             spectrogram = preprocess_audio(audio_path)
 
             # Extract label
-            label = extract_label(file_name)
+            label = extract_class_label(file_name)
+            hostile = hostility[label]["hostile"]
 
             # Append to the lists
             spectrograms.append(spectrogram)
-            labels.append(label)
+            labels.append(hostile)
 
     # Convert lists to numpy arrays
     spectrograms = np.array(spectrograms)
@@ -92,12 +94,12 @@ def train(data, model=None):
         input_shape = [i for i in input_shape if i is not None]
         model = construct_model(input_shape=input_shape)
 
-    hist = model.fit(data, epochs=30)
+    hist = model.fit(data, epochs=5)
 
     return model, hist
 
 
-def construct_model(input_shape, num_classes=50):
+def construct_model(input_shape):
     model = Sequential()
 
     # Apply convolutional layers
@@ -125,10 +127,10 @@ def construct_model(input_shape, num_classes=50):
     model.add(Dropout(0.1))
     model.add(Dense(32))
     model.add(Dropout(0.1))
-    model.add(Dense(num_classes, activation='softmax'))
+    model.add(Dense(1, activation='sigmoid'))
 
     model.compile(
-        loss="sparse_categorical_crossentropy",
+        loss="binary_crossentropy",
         optimizer=tf.keras.optimizers.Adam(),
         metrics=["accuracy"]
     )
