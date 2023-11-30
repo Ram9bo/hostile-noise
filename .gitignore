@@ -5,6 +5,7 @@ __pycache__/
 *.zip
 data/
 .idea/
+tuner_logs/
 
 # C extensions
 *.so

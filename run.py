@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import zipfile
 
@@ -7,11 +8,16 @@ import librosa.display
 import numpy as np
 import requests
 import tensorflow as tf
-from keras.layers import Conv2D, MaxPooling2D
+from keras.layers import Conv2D
 from keras.layers import Dense, Flatten, Dropout
 from keras.models import Sequential
+from keras_tuner.tuners import BayesianOptimization
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import Conv2D, Flatten, Dense, Dropout
+from tensorflow.keras.models import Sequential
 from tqdm import tqdm
-import json
+
+input_shape = None
 
 
 # Function to load and preprocess a single audio file
@@ -85,71 +91,126 @@ def get_data():
 
     # Create TensorFlow dataset
     dataset = tf.data.Dataset.from_tensor_slices((spectrograms, labels)).batch(16)
+
+    i_shape = dataset.element_spec[0].shape
+    i_shape = [i for i in i_shape if i is not None]
+
+    global input_shape
+    input_shape = i_shape
     return dataset
 
 
-def train(data, model=None):
-    if model is None:
-        input_shape = data.element_spec[0].shape
-        input_shape = [i for i in input_shape if i is not None]
-        model = construct_model(input_shape=input_shape)
 
-    hist = model.fit(data, epochs=5)
+def construct_model(num_conv_layers, conv_filters, num_dense_layers, dense_neurons, dropout, learning_rate):
+    global input_shape
+    assert input_shape is not None
 
-    return model, hist
-
-
-def construct_model(input_shape):
     model = Sequential()
 
-    # Apply convolutional layers
-    model.add(Conv2D(64, kernel_size=(3, 3),
-                     activation='relu',
-                     input_shape=input_shape))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Conv2D(64, (3, 3), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Conv2D(64, (3, 3), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Conv2D(64, (3, 3), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Conv2D(64, (3, 3), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Conv2D(conv_filters, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
 
-    # Flatten the 2D data
+    for _ in range(num_conv_layers):
+        model.add(Conv2D(conv_filters, kernel_size=(3, 3), activation='relu'))
+
     model.add(Flatten())
 
-    model.add(Dense(128))
-    model.add(Dropout(0.1))
-    model.add(Dense(128))
-    model.add(Dropout(0.1))
-    model.add(Dense(64))
-    model.add(Dropout(0.1))
-    model.add(Dense(32))
-    model.add(Dropout(0.1))
+    for _ in range(num_dense_layers):
+        model.add(Dense(dense_neurons, activation='relu'))
+        model.add(Dropout(dropout))
+
     model.add(Dense(1, activation='sigmoid'))
 
     model.compile(
         loss="binary_crossentropy",
-        optimizer=tf.keras.optimizers.Adam(),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
         metrics=["accuracy"]
     )
 
-    # TODO: try other architectures maybe hyperparameter-optimization
+    return model
+
+
+def build_model_tuned(hp):
+    global input_shape
+    assert input_shape is not None
+
+    model = Sequential()
+
+    num_conv_layers = hp.Int('num_conv_layers', min_value=1, max_value=3)
+    conv_filters = hp.Int('conv_filters', min_value=8, max_value=64, step=8)
+
+    model.add(Conv2D(conv_filters, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+
+    for _ in range(num_conv_layers):
+        model.add(Conv2D(conv_filters, kernel_size=(3, 3), activation='relu'))
+
+    model.add(Flatten())
+
+    num_dense_layers = hp.Int('num_dense_layers', min_value=1, max_value=5)
+    dense_neurons = hp.Int('dense_neurons', min_value=16, max_value=128, step=16)
+    dropout = hp.Float('dropout', min_value=0.0, max_value=0.3, step=0.1)
+
+    for _ in range(num_dense_layers):
+        model.add(Dense(dense_neurons, activation='relu'))
+        model.add(Dropout(dropout))
+
+    model.add(Dense(1, activation='sigmoid'))
+
+    lr = hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4])
+
+    model.compile(
+        loss="binary_crossentropy",
+        optimizer=tf.keras.optimizers.Adam(learning_rate=lr),
+        metrics=["accuracy"]
+    )
 
     return model
+
+
+def tune(train_data, val_data):
+    tuner = BayesianOptimization(
+        build_model_tuned,
+        objective='val_accuracy',
+        directory='tuner_logs',
+        project_name='audio_classification',
+        executions_per_trial=1,
+        max_trials=10
+    )
+
+    early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+
+    tuner.search(train_data,
+                 epochs=10,
+                 validation_data=val_data,
+                 callbacks=[early_stopping])
+
+    best_hps = tuner.oracle.get_best_trials(num_trials=1)[0].hyperparameters.values
+
+    return best_hps
 
 
 if __name__ == "__main__":
     download_data()
     data = get_data()
-    train_data, test_data = tf.keras.utils.split_dataset(data, left_size=0.9)
 
-    model, hist = train(train_data)
+    total_size = tf.data.experimental.cardinality(data).numpy()
+    train_size = int(0.8 * total_size)
+    val_size = int(0.1 * total_size)
 
-    score = model.evaluate(test_data, verbose=0)
+    # Split the dataset
+    train_data = data.take(train_size)
+    test_data = data.skip(train_size)
+    val_data = test_data.take(val_size)
+    test_data = test_data.skip(val_size)
+
+    best_hyperparameters = tune(train_data, val_data)
+
+    # Print the best hyperparameters
+    print("Best Hyperparameters:")
+    print(best_hyperparameters)
+
+    final_model = construct_model(**best_hyperparameters)
+    final_model.fit(train_data, epochs=10)
+
+    score = final_model.evaluate(test_data, verbose=0)
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
-
-
-
