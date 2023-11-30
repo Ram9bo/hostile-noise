@@ -214,6 +214,8 @@ if __name__ == "__main__":
     final_model = construct_model(**best_hyperparameters)
     final_model.fit(train_data, epochs=10, validation_data=val_data)
 
+    final_model.save('Model/model.keras')
+
     score = final_model.evaluate(test_data, verbose=0)
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
