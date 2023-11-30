@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import random
 import zipfile
 
 import librosa
@@ -71,7 +72,9 @@ def get_data():
         hostility = json.load(json_file)
 
     # Iterate through each WAV file in the folder
-    for file_name in tqdm(os.listdir(data_folder)):
+    files = os.listdir(data_folder)
+    random.shuffle(files)
+    for file_name in tqdm(files):
         if file_name.endswith(".wav"):
             # Load and preprocess audio
             audio_path = os.path.join(data_folder, file_name)
@@ -173,7 +176,7 @@ def tune(train_data, val_data):
         directory='tuner_logs',
         project_name='audio_classification',
         executions_per_trial=1,
-        max_trials=10
+        max_trials=20
     )
 
     early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
@@ -209,7 +212,7 @@ if __name__ == "__main__":
     print(best_hyperparameters)
 
     final_model = construct_model(**best_hyperparameters)
-    final_model.fit(train_data, epochs=10)
+    final_model.fit(train_data, epochs=10, validation_data=val_data)
 
     score = final_model.evaluate(test_data, verbose=0)
     print('Test loss:', score[0])
