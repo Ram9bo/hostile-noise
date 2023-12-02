@@ -191,6 +191,7 @@ def tune(train_data, val_data):
 
 
 if __name__ == "__main__":
+    tune_more = False  # Whether to do more tuning or use the best known hyperparameters immediately
     download_data()
     data = get_data()
 
@@ -204,7 +205,13 @@ if __name__ == "__main__":
     val_data = test_data.take(val_size)
     test_data = test_data.skip(val_size)
 
-    best_hyperparameters = tune(train_data, val_data)
+    if tune_more:
+        best_hyperparameters = tune(train_data, val_data)
+        with open("best_params.json", "w") as json_file:
+            json.dump(best_hyperparameters, json_file)
+    else:
+        with open("best_params.json", "r") as json_file:
+            best_hyperparameters = json.load(json_file)
 
     # Print the best hyperparameters
     print("Best Hyperparameters:")
