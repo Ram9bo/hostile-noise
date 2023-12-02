@@ -6,6 +6,8 @@ __pycache__/
 data/
 .idea/
 tuner_logs/
+Model/
+*.wav
 
 # C extensions
 *.so

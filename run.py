@@ -103,7 +103,6 @@ def get_data():
     return dataset
 
 
-
 def construct_model(num_conv_layers, conv_filters, num_dense_layers, dense_neurons, dropout, learning_rate):
     global input_shape
     assert input_shape is not None
@@ -176,7 +175,7 @@ def tune(train_data, val_data):
         directory='tuner_logs',
         project_name='audio_classification',
         executions_per_trial=1,
-        max_trials=20
+        max_trials=30
     )
 
     early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
@@ -210,6 +209,8 @@ if __name__ == "__main__":
     # Print the best hyperparameters
     print("Best Hyperparameters:")
     print(best_hyperparameters)
+
+    tf.keras.backend.clear_session()
 
     final_model = construct_model(**best_hyperparameters)
     final_model.fit(train_data, epochs=10, validation_data=val_data)

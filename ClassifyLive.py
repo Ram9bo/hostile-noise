@@ -1,22 +1,15 @@
-import io
-import os
 import time
+
+import keras
 import keyboard
-import sys
-
-from keras.layers import Conv2D, MaxPooling2D
-from keras.layers import Dense, Flatten, Dropout
-from keras.models import Sequential
-
 import librosa
 import librosa.display
-import numpy as np
 import matplotlib.pyplot as plt
-import tensorflow as tf
-import keras
-
+import numpy as np
 import sounddevice as sd
+import tensorflow as tf
 from scipy.io.wavfile import write
+
 
 def process_audio(y, sr):
     spectrogram = librosa.feature.melspectrogram(y=y, sr=sr)
@@ -27,43 +20,43 @@ def process_audio(y, sr):
 
     return reshaped_spectrogram
 
-def get_sound():
 
-    ext = 1 # exit flag
+def get_sound():
+    ext = 1  # exit flag
     sr = 22050  # Sample rate
     seconds = 5  # Duration of recording
 
-    #record 5 seconds of sound
+    # record 5 seconds of sound
     y = sd.rec(int(seconds * sr), samplerate=sr, channels=1)
 
-    #exit loop
+    # exit loop
     t_end = time.time() + 4.9
     while time.time() < t_end:
         if keyboard.is_pressed('q'):
-            return(0, -1)
-    #wait till recording is finished
+            print("Q pressed, exiting loop")
+            return (0, -1)
+    # wait till recording is finished
     sd.wait()
 
-    #save and load latest wavfile
+    # save and load latest wavfile
     write('output.wav', sr, y)
     y, sr = librosa.load('output.wav')
 
-    #process audio to correct shape
+    # process audio to correct shape
     spectrogram = process_audio(y, sr)
     spectrograms = np.array(spectrogram)
-    spectrograms = spectrograms[None,:,:,:]
+    spectrograms = spectrograms[None, :, :, :]
     sound = tf.convert_to_tensor(spectrograms, dtype=tf.float32)
 
     return sound, ext
 
 
 def plot_loop():
-
-    #load model
+    # load model
     model = keras.models.load_model('Model/model.keras')
 
-    #set up plot
-    plt.axis([0, 20, 0, 50]) 
+    # set up plot
+    plt.axis([0, 20, 0, 50])
     plt.title("Live classification", fontsize=20)
     plt.xlabel("time")
     plt.ylabel("hostile-likelyhood")
@@ -71,8 +64,7 @@ def plot_loop():
     xar = []
     x = 1
 
-    while(True):
-    
+    while True:
         sound, ext = get_sound()
 
         if ext == -1:
@@ -80,24 +72,21 @@ def plot_loop():
             return
 
         score = model.predict(sound, verbose=0)
+        print(score)
 
-        #get last 20 scores
-        if x <= 20 :
+        # get last 20 scores
+        if x <= 20:
             xar.append(x)
         else:
             yar.pop(0)
-        yar.append(np.argmax(score))
-        x +=1
+        yar.append(score[0][0])
+        x += 1
 
-        #plot data
+        # plot data
         plt.clf()
         plt.plot(xar, yar)
         plt.pause(0.01)
-        
 
 
 if __name__ == "__main__":
-
     plot_loop()
-
-  
