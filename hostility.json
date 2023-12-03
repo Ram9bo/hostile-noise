@@ -198,5 +198,9 @@
   "49": {
     "name": "hand_saw",
     "hostile": true
+  },
+  "50": {
+    "name": "silence",
+    "hostile": false
   }
 }
