@@ -73,7 +73,7 @@
   },
   "18": {
     "name": "toilet_flush",
-    "hostile": false
+    "hostile": true
   },
   "19": {
     "name": "thunderstorm",
@@ -85,7 +85,7 @@
   },
   "21": {
     "name": "sneezing",
-    "hostile": false
+    "hostile": true
   },
   "22": {
     "name": "clapping",
@@ -177,7 +177,7 @@
   },
   "44": {
     "name": "engine",
-    "hostile": false
+    "hostile": true
   },
   "45": {
     "name": "train",
@@ -197,6 +197,6 @@
   },
   "49": {
     "name": "hand_saw",
-    "hostile": false
+    "hostile": true
   }
 }

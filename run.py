@@ -14,7 +14,7 @@ from keras.layers import Dense, Flatten, Dropout
 from keras.models import Sequential
 from keras_tuner.tuners import BayesianOptimization
 from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.layers import Conv2D, Flatten, Dense, Dropout
+from tensorflow.keras.layers import Conv2D, Flatten, Dense, Dropout, MaxPooling2D
 from tensorflow.keras.models import Sequential
 from tqdm import tqdm
 
@@ -29,7 +29,7 @@ def preprocess_audio(audio_path):
     spectrogram = np.concatenate([spectrogram, spectrogram_db])
     # Reshape the 2D spectrogram to have a single channel
     reshaped_spectrogram = np.expand_dims(spectrogram, axis=-1)
-    return reshaped_spectrogram
+    return reshaped_spectrogram / 255
 
 
 # Function to extract class label from file name
@@ -71,6 +71,10 @@ def get_data():
     with open('hostility.json', 'r') as json_file:
         hostility = json.load(json_file)
 
+    # Lists to store spectrograms and labels for each class
+    true_class_spectrograms = []
+    false_class_spectrograms = []
+
     # Iterate through each WAV file in the folder
     files = os.listdir(data_folder)
     random.shuffle(files)
@@ -84,12 +88,28 @@ def get_data():
             label = extract_class_label(file_name)
             hostile = hostility[label]["hostile"]
 
-            # Append to the lists
-            spectrograms.append(spectrogram)
-            labels.append(hostile)
+            # Append to the lists based on class
+            if hostile:
+                true_class_spectrograms.append(spectrogram)
+            else:
+                false_class_spectrograms.append(spectrogram)
+
+    # Undersample the majority class (false class) to balance the dataset
+    min_class_size = min(len(true_class_spectrograms), len(false_class_spectrograms))
+    true_class_spectrograms = random.sample(true_class_spectrograms, min_class_size)
+    false_class_spectrograms = random.sample(false_class_spectrograms, min_class_size)
+
+    # Combine the balanced data
+    balanced_spectrograms = true_class_spectrograms + false_class_spectrograms
+    labels = [1] * min_class_size + [0] * min_class_size
+
+    # Shuffle the data
+    combined_data = list(zip(balanced_spectrograms, labels))
+    random.shuffle(combined_data)
+    balanced_spectrograms[:], labels[:] = zip(*combined_data)
 
     # Convert lists to numpy arrays
-    spectrograms = np.array(spectrograms)
+    spectrograms = np.array(balanced_spectrograms)
     labels = np.array(labels)
 
     # Create TensorFlow dataset
@@ -125,7 +145,7 @@ def construct_model(num_conv_layers, conv_filters, num_dense_layers, dense_neuro
     model.compile(
         loss="binary_crossentropy",
         optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
-        metrics=["accuracy"]
+        metrics=["accuracy", tf.keras.metrics.Precision(), tf.keras.metrics.Recall()]
     )
 
     return model
@@ -137,13 +157,14 @@ def build_model_tuned(hp):
 
     model = Sequential()
 
-    num_conv_layers = hp.Int('num_conv_layers', min_value=1, max_value=3)
+    num_conv_layers = hp.Int('num_conv_layers', min_value=1, max_value=5)
     conv_filters = hp.Int('conv_filters', min_value=8, max_value=64, step=8)
 
     model.add(Conv2D(conv_filters, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
 
     for _ in range(num_conv_layers):
         model.add(Conv2D(conv_filters, kernel_size=(3, 3), activation='relu'))
+        model.add(MaxPooling2D((2, 2)))
 
     model.add(Flatten())
 
@@ -162,7 +183,7 @@ def build_model_tuned(hp):
     model.compile(
         loss="binary_crossentropy",
         optimizer=tf.keras.optimizers.Adam(learning_rate=lr),
-        metrics=["accuracy"]
+        metrics=["accuracy", tf.keras.metrics.Precision(), tf.keras.metrics.Recall()]
     )
 
     return model
@@ -174,8 +195,9 @@ def tune(train_data, val_data):
         objective='val_accuracy',
         directory='tuner_logs',
         project_name='audio_classification',
-        executions_per_trial=1,
-        max_trials=30
+        executions_per_trial=3,
+        max_trials=30,
+        overwrite=True
     )
 
     early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
@@ -191,7 +213,7 @@ def tune(train_data, val_data):
 
 
 if __name__ == "__main__":
-    tune_more = False  # Whether to do more tuning or use the best known hyperparameters immediately
+    tune_more = True  # Whether to do more tuning or use the best known hyperparameters immediately
     download_data()
     data = get_data()
 
@@ -220,10 +242,14 @@ if __name__ == "__main__":
     tf.keras.backend.clear_session()
 
     final_model = construct_model(**best_hyperparameters)
-    final_model.fit(train_data, epochs=10, validation_data=val_data)
+    final_model.fit(train_data, epochs=10, validation_data=val_data, verbose=1)
 
     final_model.save('Model/model.keras')
 
     score = final_model.evaluate(test_data, verbose=0)
+
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
+    print('Test precision:', score[2])
+    print('Test recall:', score[3])
+    print('Test F1:', 2 * (score[2] * score[3]) / (score[2] + score[3]))
