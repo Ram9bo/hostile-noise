@@ -31,7 +31,7 @@ def process_audio(y, sr):
     # Reshape the 2D spectrogram to have a single channel
     reshaped_spectrogram = np.expand_dims(spectrogram, axis=-1)
 
-    return reshaped_spectrogram
+    return reshaped_spectrogram / 255
 
 def get_sound():
 
@@ -43,7 +43,7 @@ def get_sound():
     y1 = sd.rec(int(seconds * sr), samplerate=sr, channels=1)
 
     #exit loop
-    t_end = time.time() + 0.9
+    t_end = time.time() + 4.9
     while time.time() < t_end:
         if keyboard.is_pressed('q'):
             return(0, -1)
@@ -55,10 +55,8 @@ def get_sound():
     write('output.wav', sr, y1)
     y, sr1 = librosa.load('output.wav')
     
-
-
-    write('output5SEC.wav', sr, y)
-
+    #y, sr1 = librosa.load('1-137-A-32.wav') non hostile
+    #y, sr1 = librosa.load('1-9886-A-49.wav')  hostile
 
     #process audio to correct shape
     spectrogram = process_audio(y, sr)
@@ -75,13 +73,13 @@ def plot_loop():
     model = keras.models.load_model('Model/model.keras')
 
     #set up plot
-    plt.axis([0, 20, 0, 50]) 
+
     plt.title("Live classification", fontsize=20)
     plt.xlabel("time")
     plt.ylabel("hostile-likelyhood")
     yar = []
     xar = []
-    x = 1
+    x = 0
 
     while(True):
     
@@ -107,6 +105,9 @@ def plot_loop():
 
         #plot data
         plt.clf()
+        plt.axis([0, 20, 0, 1]) 
+
+        plt.autoscale(False)
         plt.plot(xar, yar)
         plt.pause(0.01)
         
