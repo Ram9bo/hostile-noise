@@ -1,8 +1,1 @@
-{
-  "num_conv_layers": 2,
-  "conv_filters": 40,
-  "num_dense_layers": 4,
-  "dense_neurons": 128,
-  "dropout": 0.1,
-  "learning_rate": 0.0001
-}
+{"num_conv_layers": 3, "conv_filters": 64, "num_dense_layers": 4, "dense_neurons": 80, "dropout": 0.0, "learning_rate": 0.001}

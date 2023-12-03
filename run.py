@@ -86,7 +86,7 @@ def get_data():
 
             # Extract label
             label = extract_class_label(file_name)
-            hostile = hostility[label]["hostile"]
+            hostile = int(hostility[label]["hostile"])
 
             # Append to the lists based on class
             if hostile:
@@ -184,6 +184,7 @@ def build_model_tuned(hp):
         loss="binary_crossentropy",
         optimizer=tf.keras.optimizers.Adam(learning_rate=lr),
         metrics=["accuracy", tf.keras.metrics.Precision(), tf.keras.metrics.Recall()]
+        # TODO: write custom F1 score and include it, then we can also tune for it
     )
 
     return model
@@ -197,7 +198,7 @@ def tune(train_data, val_data):
         project_name='audio_classification',
         executions_per_trial=3,
         max_trials=30,
-        overwrite=True
+        overwrite=False
     )
 
     early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
