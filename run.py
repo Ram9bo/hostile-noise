@@ -17,6 +17,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Conv2D, Flatten, Dense, Dropout, MaxPooling2D
 from tensorflow.keras.models import Sequential
 from tqdm import tqdm
+import json
 
 input_shape = None
 
@@ -197,7 +198,7 @@ def tune(train_data, val_data):
         directory='tuner_logs',
         project_name='audio_classification',
         executions_per_trial=3,
-        max_trials=30,
+        max_trials=35,
         overwrite=False
     )
 
@@ -242,12 +243,21 @@ if __name__ == "__main__":
 
     tf.keras.backend.clear_session()
 
+    with open("eval.json", "r") as json_file:
+        metrics = json.load(json_file)
+
     final_model = construct_model(**best_hyperparameters)
     final_model.fit(train_data, epochs=10, validation_data=val_data, verbose=1)
 
     final_model.save('Model/model.keras')
 
     score = final_model.evaluate(test_data, verbose=0)
+    metrics.append(score)
+
+    with open("eval.json", "w") as json_file:
+        json.dump(metrics, json_file)
+
+    score = np.mean(np.array(metrics), axis=0)
 
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
