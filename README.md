@@ -13,6 +13,8 @@ Execute run.py
 
 This will perform hyperparameter tuning followed by training and evaluation of models with the best configuration. 
 
+A model will be created at Model/model.keras during this run.
+
 Note: due to the absence of pooling layers, the model is very large and requires considerable computational resources.
 
 # Classifying live sounds
