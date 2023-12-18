@@ -4,6 +4,10 @@ API Final Project
 # Data
 Dataset needs to be obtained from https://github.com/karolpiczak/ESC-50
 
+Dataset zip file should be unzipped in a folder called 'data'
+
+The categorization of sounds into hostile and non-hostile categories can be found in hostility.json
+
 # Training a model
 Execute run.py
 
