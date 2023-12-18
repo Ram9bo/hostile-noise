@@ -87,6 +87,7 @@ def get_sound():
 def plot_loop():
     # load model
     model = keras.models.load_model('Model/model.keras')
+    model.summary()
 
     # set up plot
     plt.axis([0, 20, 0, 50])

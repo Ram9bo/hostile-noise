@@ -8,6 +8,8 @@ data/
 tuner_logs/
 Model/
 *.wav
+*.png
+eval.json
 
 # C extensions
 *.so

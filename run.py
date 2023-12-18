@@ -14,10 +14,9 @@ from keras.layers import Dense, Flatten, Dropout
 from keras.models import Sequential
 from keras_tuner.tuners import BayesianOptimization
 from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.layers import Conv2D, Flatten, Dense, Dropout, MaxPooling2D
+from tensorflow.keras.layers import Conv2D, Flatten, Dense, Dropout
 from tensorflow.keras.models import Sequential
 from tqdm import tqdm
-import json
 
 input_shape = None
 
@@ -114,7 +113,7 @@ def get_data():
     labels = np.array(labels)
 
     # Create TensorFlow dataset
-    dataset = tf.data.Dataset.from_tensor_slices((spectrograms, labels)).batch(16)
+    dataset = tf.data.Dataset.from_tensor_slices((spectrograms, labels)).batch(4)
 
     i_shape = dataset.element_spec[0].shape
     i_shape = [i for i in i_shape if i is not None]
@@ -165,7 +164,6 @@ def build_model_tuned(hp):
 
     for _ in range(num_conv_layers):
         model.add(Conv2D(conv_filters, kernel_size=(3, 3), activation='relu'))
-        model.add(MaxPooling2D((2, 2)))
 
     model.add(Flatten())
 
@@ -185,7 +183,6 @@ def build_model_tuned(hp):
         loss="binary_crossentropy",
         optimizer=tf.keras.optimizers.Adam(learning_rate=lr),
         metrics=["accuracy", tf.keras.metrics.Precision(), tf.keras.metrics.Recall()]
-        # TODO: write custom F1 score and include it, then we can also tune for it
     )
 
     return model
@@ -198,11 +195,11 @@ def tune(train_data, val_data):
         directory='tuner_logs',
         project_name='audio_classification',
         executions_per_trial=3,
-        max_trials=35,
+        max_trials=20,
         overwrite=False
     )
 
-    early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+    early_stopping = EarlyStopping(monitor='val_accuracy', patience=5, restore_best_weights=True)
 
     tuner.search(train_data,
                  epochs=10,
@@ -215,6 +212,9 @@ def tune(train_data, val_data):
 
 
 if __name__ == "__main__":
+
+    eval_average = 1
+
     tune_more = True  # Whether to do more tuning or use the best known hyperparameters immediately
     download_data()
     data = get_data()
@@ -241,26 +241,46 @@ if __name__ == "__main__":
     print("Best Hyperparameters:")
     print(best_hyperparameters)
 
-    tf.keras.backend.clear_session()
+    for _ in range(eval_average):
+        tf.keras.backend.clear_session()
 
-    with open("eval.json", "r") as json_file:
-        metrics = json.load(json_file)
+        data = get_data()
 
-    final_model = construct_model(**best_hyperparameters)
-    final_model.fit(train_data, epochs=10, validation_data=val_data, verbose=1)
+        total_size = tf.data.experimental.cardinality(data).numpy()
+        train_size = int(0.8 * total_size)
+        val_size = int(0.1 * total_size)
 
-    final_model.save('Model/model.keras')
+        # Split the dataset
+        train_data = data.take(train_size)
+        test_data = data.skip(train_size)
+        val_data = test_data.take(val_size)
+        test_data = test_data.skip(val_size)
 
-    score = final_model.evaluate(test_data, verbose=0)
-    metrics.append(score)
+        with open("eval.json", "r") as json_file:
+            metrics = json.load(json_file)
 
-    with open("eval.json", "w") as json_file:
-        json.dump(metrics, json_file)
+        final_model = construct_model(**best_hyperparameters)
 
-    score = np.mean(np.array(metrics), axis=0)
+        final_model.summary()
 
-    print('Test loss:', score[0])
-    print('Test accuracy:', score[1])
-    print('Test precision:', score[2])
-    print('Test recall:', score[3])
-    print('Test F1:', 2 * (score[2] * score[3]) / (score[2] + score[3]))
+        final_model.fit(train_data, epochs=10, validation_data=val_data, verbose=1)
+
+        final_model.save('Model/model.keras')
+
+        score = final_model.evaluate(test_data, verbose=0)
+        metrics.append(score)
+
+        with open("eval.json", "w") as json_file:
+            json.dump(metrics, json_file)
+
+        for score in metrics:
+            score.append(2 * (score[2] * score[3]) / (score[2] + score[3]))
+
+        score = np.mean(np.array(metrics), axis=0)
+        sd = np.std(np.array(metrics), axis=0)
+
+        print('Test loss:', score[0], sd[0])
+        print('Test accuracy:', score[1], sd[1])
+        print('Test precision:', score[2], sd[2])
+        print('Test recall:', score[3], sd[3])
+        print('Test F1:', score[4], sd[4])
