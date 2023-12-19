@@ -18,6 +18,6 @@ A model will be created at Model/model.keras during this run.
 Note: due to the absence of pooling layers, the model is very large and requires considerable computational resources.
 
 # Classifying live sounds
-Execute ClassifyLive.py
+Execute ClassifyLive5sec.py
 
 This will use the model at Model/model.keras to classify the sounds picked up by the microphone.
