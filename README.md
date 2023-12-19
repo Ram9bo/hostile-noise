@@ -21,3 +21,5 @@ Note: due to the absence of pooling layers, the model is very large and requires
 Execute ClassifyLive5sec.py
 
 This will use the model at Model/model.keras to classify the sounds picked up by the microphone.
+
+A pretrained model (the same that was used for the demo) is available at https://mega.nz/file/iWp30KRB#D0JWoNFybpiDmQGu00y2iSa2JjT6sBUpHypslkmSaHg
